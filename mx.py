@@ -602,8 +602,9 @@ HW_BY_LABEL["haptic"] = "haptic-hw"
 
 def software_actions() -> dict[str, tuple[VerifiedExec, list[str]]]:
     actions: dict[str, tuple[VerifiedExec, list[str]]] = {
-        "workspace-next": (HYPRCTL, ["dispatch", "workspace", "e+1"]),
-        "workspace-prev": (HYPRCTL, ["dispatch", "workspace", "e-1"]),
+        # Lua-config Hyprland evaluates `hyprctl dispatch` args as Lua.
+        "workspace-next": (HYPRCTL, ["dispatch", 'hl.dsp.focus({ workspace = "e+1" })']),
+        "workspace-prev": (HYPRCTL, ["dispatch", 'hl.dsp.focus({ workspace = "e-1" })']),
         "menu": (OMARCHY, ["menu", "summon", "root"]),
         "expose": (OMARCHY_SHELL, ["expose", "toggle"]),
         "volume-up": (OMARCHY, ["audio", "output", "volume", "raise"]),
@@ -853,6 +854,11 @@ def cmd_listen(serial: str | None) -> None:
     if remap is not None:
         for key in remap.choices.keys():
             cid_to_button[int(key)] = str(key)
+    # reprogrammable-keys can fail to build (Solaar AttributeError on
+    # remappable_to over Bluetooth), so also name CIDs from divert-keys.
+    if divert is not None:
+        for key in divert.choices.keys():
+            cid_to_button.setdefault(int(key), str(key))
     receiver = getattr(mouse, "receiver", None) or mouse
     handle = getattr(receiver, "handle", None)
     if handle is None:
