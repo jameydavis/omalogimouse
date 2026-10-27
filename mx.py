@@ -84,6 +84,8 @@ def _closed_env() -> dict[str, str]:
         "XDG_SESSION_TYPE",
         "XDG_CURRENT_DESKTOP",
         "DBUS_SESSION_BUS_ADDRESS",
+        # The omarchy CLI exits with "OMARCHY_PATH is not set" without it.
+        "OMARCHY_PATH",
         "LANG",
         "LC_ALL",
     )
@@ -332,6 +334,10 @@ try:
     HYPRCTL = VerifiedExec("/usr/bin/hyprctl", owner=0)
     OMARCHY = VerifiedExec("/usr/bin/omarchy", owner=0)
     OMARCHY_SHELL = VerifiedExec("/usr/bin/omarchy-shell", owner=0)
+    # The omarchy dispatcher resolves subcommands from its own directory, which
+    # is /proc/self/fd under VerifiedExec, so call the route binaries directly.
+    OMARCHY_MENU = VerifiedExec("/usr/bin/omarchy-menu", owner=0)
+    OMARCHY_VOLUME = VerifiedExec("/usr/bin/omarchy-audio-output-volume", owner=0)
 except OSError as exc:
     fail(str(exc))
 
@@ -605,11 +611,11 @@ def software_actions() -> dict[str, tuple[VerifiedExec, list[str]]]:
         # Lua-config Hyprland evaluates `hyprctl dispatch` args as Lua.
         "workspace-next": (HYPRCTL, ["dispatch", 'hl.dsp.focus({ workspace = "e+1" })']),
         "workspace-prev": (HYPRCTL, ["dispatch", 'hl.dsp.focus({ workspace = "e-1" })']),
-        "menu": (OMARCHY, ["menu", "summon", "root"]),
+        "menu": (OMARCHY_MENU, ["summon", "root"]),
         "expose": (OMARCHY_SHELL, ["expose", "toggle"]),
-        "volume-up": (OMARCHY, ["audio", "output", "volume", "raise"]),
-        "volume-down": (OMARCHY, ["audio", "output", "volume", "lower"]),
-        "mute": (OMARCHY, ["audio", "output", "volume", "mute-toggle"]),
+        "volume-up": (OMARCHY_VOLUME, ["raise"]),
+        "volume-down": (OMARCHY_VOLUME, ["lower"]),
+        "mute": (OMARCHY_VOLUME, ["mute-toggle"]),
         "play-pause": (OMARCHY_SHELL, ["media", "playPause"]),
     }
     shot = verified_user_exec("screenshot-region-clipboard")
